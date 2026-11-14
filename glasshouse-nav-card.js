@@ -1,5 +1,5 @@
 /*!
- * Glasshouse Nav Card v1.2.2
+ * Glasshouse Nav Card v1.2.3
  * App-like navigation for multi-view Home Assistant dashboards: a floating frosted tab bar on
  * phones, a slim rail (or a centred segmented bar) on desktop.
  * Part of the Glasshouse card suite. MIT License (c) 2026 Peter Gray.
@@ -7,7 +7,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.2.2';
+  const VERSION = '1.2.3';
   const TAG = 'glasshouse-nav-card';
   const PORTAL_TAG = 'glasshouse-nav-portal';
   const HEADER_STYLE_ID = 'glasshouse-nav-hide-header';
@@ -521,7 +521,8 @@
       const wrap = h('div', { class: 'wrap' });
       if (model.accent) wrap.style.setProperty('--gh-accent', model.accent);
       const dock = h('div', { class: `dock ${model.mode}${model.side ? ` side side-${model.side}` : ''}${model.inline ? ' inline' : ''}`, part: 'dock' });
-      const bar = h('nav', { class: 'bar', 'aria-label': 'Dashboard navigation', part: 'bar' });
+      // ha-scrollbar: hass-swipe-navigation leaves the bar alone when it scrolls sideways
+      const bar = h('nav', { class: 'bar ha-scrollbar', 'aria-label': 'Dashboard navigation', part: 'bar' });
       const track = h('div', { class: 'track', role: 'list' });
       this.ind = h('span', { class: 'ind', 'aria-hidden': 'true' });
       track.append(this.ind);
