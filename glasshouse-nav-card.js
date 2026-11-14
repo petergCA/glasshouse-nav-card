@@ -1,5 +1,5 @@
 /*!
- * Glasshouse Nav Card v1.0.0
+ * Glasshouse Nav Card v1.1.0
  * App-like navigation for multi-view Home Assistant dashboards: a floating frosted tab bar on
  * phones, a slim rail (or a centred segmented bar) on desktop.
  * Part of the Glasshouse card suite. MIT License (c) 2026 Peter Gray.
@@ -7,7 +7,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
   const TAG = 'glasshouse-nav-card';
   const PORTAL_TAG = 'glasshouse-nav-portal';
   const HEADER_STYLE_ID = 'glasshouse-nav-hide-header';
@@ -21,7 +21,7 @@
   const TEARDOWN_MS = 400;       // grace period so a view switch does not flicker the bar
   const DRAG_CLOSE_PX = 70;
 
-  const LAYOUTS = ['rail', 'top'];
+  const LAYOUTS = ['rail', 'top', 'none'];
   const HEADER_MODES = ['auto', true, false];
 
   // Ancestor element names in the Home Assistant frontend that we look for (all optional).
@@ -353,7 +353,7 @@
     const hide = config.hide_header === undefined ? 'auto' : config.hide_header;
     if (!HEADER_MODES.includes(hide)) throw new Error('glasshouse-nav-card: "hide_header" must be auto, true or false');
     const layout = config.layout === undefined ? 'rail' : config.layout;
-    if (!LAYOUTS.includes(layout)) throw new Error('glasshouse-nav-card: "layout" must be rail or top');
+    if (!LAYOUTS.includes(layout)) throw new Error('glasshouse-nav-card: "layout" must be rail, top or none');
     return {
       routes: config.routes.map((r, i) => normalizeRoute(r, 'routes', i)),
       more: (config.more || []).map((r, i) => normalizeRoute(r, 'more', i)),
@@ -850,6 +850,17 @@
 
       // 1. header
       this._setHeader(ctx.root, hideHeader);
+
+      // layout: none = phones only; on wide screens show nothing and push nothing
+      if (this.portal) this.portal.style.display = mode === 'none' ? 'none' : '';
+      if (mode === 'none') {
+        document.documentElement.style.setProperty('--gh-nav-height', '0px');
+        document.documentElement.style.setProperty('--gh-nav-offset-left', '0px');
+        this._setPad(null, null);
+        card._setSpacer(false);
+        this._observe(ctx.view);
+        return;
+      }
 
       // 2. surface
       const all = cfg.routes.concat(cfg.more);
