@@ -1,5 +1,5 @@
 /*!
- * Glasshouse Nav Card v1.1.0
+ * Glasshouse Nav Card v1.2.0
  * App-like navigation for multi-view Home Assistant dashboards: a floating frosted tab bar on
  * phones, a slim rail (or a centred segmented bar) on desktop.
  * Part of the Glasshouse card suite. MIT License (c) 2026 Peter Gray.
@@ -7,7 +7,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.1.0';
+  const VERSION = '1.2.0';
   const TAG = 'glasshouse-nav-card';
   const PORTAL_TAG = 'glasshouse-nav-portal';
   const HEADER_STYLE_ID = 'glasshouse-nav-hide-header';
@@ -22,6 +22,7 @@
   const DRAG_CLOSE_PX = 70;
 
   const LAYOUTS = ['rail', 'top', 'none'];
+  const SIDE_MIN = 56; // px of side safe-area that turns the phone bar vertical
   const HEADER_MODES = ['auto', true, false];
 
   // Ancestor element names in the Home Assistant frontend that we look for (all optional).
@@ -154,6 +155,17 @@
     .mobile .track { height: 100%; }
     .mobile .tab { flex: 1 1 0; min-width: 0; flex-direction: column; gap: 4px; padding: 0 2px; }
     .mobile .ind { border-radius: 26px; }
+
+    /* ---------- phones with a wide side safe-area (e.g. a status strip): vertical bar inside it ---------- */
+    .dock.mobile.side { top: auto; left: auto; right: auto; padding: 0 6px; justify-content: center;
+      bottom: calc(env(safe-area-inset-bottom) + ${BAR_GAP}px); }
+    .dock.mobile.side-right { right: 0; width: env(safe-area-inset-right); }
+    .dock.mobile.side-left { left: 0; width: env(safe-area-inset-left); }
+    .side .bar { width: 100%; max-width: 72px; height: auto; border-radius: 30px; padding: 6px; }
+    .side .track { flex-direction: column; height: auto; gap: 2px; }
+    .side .tab { flex: none; width: 100%; height: 62px; flex-direction: column; gap: 3px; padding: 0; }
+    .side .lb { font-size: 10px; }
+    .side .ind { border-radius: 24px; }
 
     /* ---------- desktop: rail ---------- */
     .dock.rail { left: var(--gh-nav-left, ${EDGE}px); top: var(--gh-nav-top, 68px); }
@@ -365,6 +377,7 @@
       menu_button: config.menu_button !== false,
       more_label: config.more_label ? String(config.more_label) : 'More',
       more_icon: config.more_icon ? String(config.more_icon) : 'mdi:dots-horizontal',
+      side_rail: config.side_rail === false ? false : true,
     };
   }
 
@@ -507,7 +520,7 @@
 
       const wrap = h('div', { class: 'wrap' });
       if (model.accent) wrap.style.setProperty('--gh-accent', model.accent);
-      const dock = h('div', { class: `dock ${model.mode}${model.inline ? ' inline' : ''}`, part: 'dock' });
+      const dock = h('div', { class: `dock ${model.mode}${model.side ? ` side side-${model.side}` : ''}${model.inline ? ' inline' : ''}`, part: 'dock' });
       const bar = h('nav', { class: 'bar', 'aria-label': 'Dashboard navigation', part: 'bar' });
       const track = h('div', { class: 'track', role: 'list' });
       this.ind = h('span', { class: 'ind', 'aria-hidden': 'true' });
@@ -767,6 +780,10 @@
       this.portal = document.createElement(PORTAL_TAG);
       this.portal.attachShadow({ mode: 'open' });
       document.body.append(this.portal);
+      this._insetProbe = document.createElement('div');
+      this._insetProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;visibility:hidden;pointer-events:none;'
+        + 'padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);';
+      this.portal.shadowRoot.append(this._insetProbe);
       this.surface = new NavSurface(this.portal.shadowRoot, {
         navigate: (key) => this.navigate(key),
         menu: () => this.fire('hass-toggle-menu', {}),
@@ -866,9 +883,17 @@
       const all = cfg.routes.concat(cfg.more);
       const keyed = all.map((r, i) => ({ key: i, label: r.label, icon: r.icon, color: r.color }));
       let model;
+      let side = null;
+      if (mode === 'mobile' && cfg.side_rail && this._insetProbe && this._insetProbe.isConnected) {
+        try {
+          const cs = getComputedStyle(this._insetProbe);
+          const l = parseFloat(cs.paddingLeft) || 0, r = parseFloat(cs.paddingRight) || 0;
+          if (Math.max(l, r) >= SIDE_MIN) side = r >= l ? 'right' : 'left';
+        } catch (e) { /* no safe-area support */ }
+      }
       if (mode === 'mobile') {
         const s = splitTabs(keyed.slice(0, cfg.routes.length), keyed.slice(cfg.routes.length), system);
-        model = { mode, tabs: s.tabs, overflow: s.overflow, hasMore: s.hasMore };
+        model = { mode, tabs: s.tabs, overflow: s.overflow, hasMore: s.hasMore, side };
       } else {
         model = { mode, tabs: keyed.slice(0, cfg.routes.length), overflow: keyed.slice(cfg.routes.length), hasMore: false };
       }
@@ -882,7 +907,12 @@
       const root = document.documentElement;
       const dock = this.portal.shadowRoot.querySelector('.dock');
       let spacer = false;
-      if (mode === 'mobile') {
+      if (mode === 'mobile' && side) {
+        // the bar lives in the side safe-area: nothing to push
+        root.style.setProperty('--gh-nav-height', '0px');
+        root.style.setProperty('--gh-nav-offset-left', '0px');
+        this._setPad(null, null);
+      } else if (mode === 'mobile') {
         root.style.setProperty('--gh-nav-height', `calc(${BAR_H + BAR_GAP + 10}px + env(safe-area-inset-bottom))`);
         root.style.setProperty('--gh-nav-offset-left', '0px');
         if (cfg.push && ctx.view && !ctx.inFooter) this._setPad(ctx.view, { paddingBottom: 'var(--gh-nav-height)' });

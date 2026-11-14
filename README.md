@@ -78,6 +78,7 @@ dashboard or panel without the card removes the bar and restores everything it c
 | `mobile_breakpoint` | number | `768` | Window width in px below which the phone tab bar is used. |
 | `layout` | `rail` / `top` / `none` | `rail` | Desktop style: left rail, centred segmented bar on top, or `none` (phones only: nothing is shown or pushed at or above the breakpoint, e.g. when Home Assistant's own view tabs are enough). |
 | `hide_header` | `auto` / `true` / `false` | `auto` | `auto` hides Home Assistant's toolbar on phones only; `true` always; `false` never. Never hidden in edit mode. |
+| `side_rail` | boolean | `true` | On phones with a wide side safe-area (≥ 56 px, e.g. a status strip along one edge), stand the tab bar up vertically inside that strip instead of along the bottom. |
 | `push` | boolean | `true` | Make room for the bar (bottom spacer on phones, left/top padding on desktop). |
 | `accent` | CSS colour | `--gh-info` | Accent of the active tab. |
 | `menu_button` | boolean | `true` | Add *Home Assistant menu* and *Show toolbar* rows to the More sheet while the toolbar is hidden. |
