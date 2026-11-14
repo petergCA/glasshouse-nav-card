@@ -1,5 +1,5 @@
 /*!
- * Glasshouse Nav Card v1.2.1
+ * Glasshouse Nav Card v1.2.2
  * App-like navigation for multi-view Home Assistant dashboards: a floating frosted tab bar on
  * phones, a slim rail (or a centred segmented bar) on desktop.
  * Part of the Glasshouse card suite. MIT License (c) 2026 Peter Gray.
@@ -7,7 +7,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.2.1';
+  const VERSION = '1.2.2';
   const TAG = 'glasshouse-nav-card';
   const PORTAL_TAG = 'glasshouse-nav-portal';
   const HEADER_STYLE_ID = 'glasshouse-nav-hide-header';
@@ -736,6 +736,7 @@
   class NavController {
     constructor() {
       this.cards = [];
+      if (this._insetProbe) { this._insetProbe.remove(); this._insetProbe = null; }
       this.portal = null;
       this.surface = null;
       this.timer = null;
@@ -783,7 +784,8 @@
       this._insetProbe = document.createElement('div');
       this._insetProbe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;visibility:hidden;pointer-events:none;'
         + 'padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);';
-      this.portal.shadowRoot.append(this._insetProbe);
+      this._insetProbe.setAttribute('data-glasshouse-nav-probe', '');
+      document.body.append(this._insetProbe); // not inside the portal: the surface re-renders its shadow root
       this.surface = new NavSurface(this.portal.shadowRoot, {
         navigate: (key) => this.navigate(key),
         menu: () => this.fire('hass-toggle-menu', {}),
@@ -802,6 +804,7 @@
       window.removeEventListener('popstate', this._onLocation);
       if (this.surface) this.surface.closeSheet();
       if (this.portal) this.portal.remove();
+      if (this._insetProbe) { this._insetProbe.remove(); this._insetProbe = null; }
       this.portal = null;
       this.surface = null;
       this._setHeader(null, false);
