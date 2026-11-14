@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Glasshouse Nav Card harness</title>
+<!--
+  Offline test harness, served over http by shot.sh (pushState needs a real origin).
+  It fakes the Home Assistant frontend structure the card integrates with:
+    home-assistant ⟶ (shadow) home-assistant-main ⟶ sidebar + ha-panel-lovelace ⟶ (shadow) hui-root
+    ⟶ (shadow) .header toolbar + #view ⟶ hui-view ⟶ hui-sections-view ⟶ (shadow) sections + hui-view-footer ⟶ the card
+  Query: ?path=<view>  ?sheet (open the More sheet)  ?layout=top  ?edit  ?hide_header=false
+-->
+<style>
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    color: #e9eef6;
+    font-family: -apple-system, "SF Pro Text", Inter, Roboto, system-ui, sans-serif;
+    background:
+      radial-gradient(1200px 700px at 12% -10%, rgba(88,166,255,0.16), transparent 60%),
+      radial-gradient(900px 600px at 95% 5%, rgba(196,140,255,0.12), transparent 60%),
+      radial-gradient(1000px 800px at 50% 120%, rgba(77,214,232,0.08), transparent 60%),
+      linear-gradient(180deg, #070b13 0%, #0a1020 55%, #070b13 100%) fixed;
+    --header-height: 56px;
+  }
+</style>
+<script src="icons.js" onerror="window.GH_TEST_ICONS = {}"></script>
+<script>
+  // ---- ha-icon stub ----
+  function svgFor(name) {
+    const d = (window.GH_TEST_ICONS || {})[name];
+    if (!d) return `<span style="font:700 9px system-ui">${String(name || '?').replace('mdi:', '').slice(0, 2).toUpperCase()}</span>`;
+    return `<svg viewBox="0 0 24 24" width="100%" height="100%" style="display:block;fill:currentColor"><path d="${d}"></path></svg>`;
+  }
+  customElements.define('ha-card', class extends HTMLElement {});
+  customElements.define('ha-icon', class extends HTMLElement {
+    static get observedAttributes() { return ['icon']; }
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' }).innerHTML =
+        '<style>:host{display:inline-flex;width:var(--mdc-icon-size,24px);height:var(--mdc-icon-size,24px);align-items:center;justify-content:center;vertical-align:middle}</style><span style="display:contents"></span>';
+    }
+    set icon(v) { this._icon = v; this._r(); }
+    get icon() { return this._icon; }
+    attributeChangedCallback(n, o, v) { this._icon = v; this._r(); }
+    _r() { this.shadowRoot.querySelector('span').innerHTML = svgFor(this._icon); }
+  });
+
+  const Q = new URLSearchParams(location.search);
+  const VIEWS = {
+    home: { title: 'Now', icon: 'mdi:home-variant' },
+    rooms: { title: 'Rooms', icon: 'mdi:floor-plan' },
+    climate: { title: 'Climate', icon: 'mdi:thermostat' },
+    security: { title: 'Security', icon: 'mdi:shield-home' },
+    energy: { title: 'Energy', icon: 'mdi:lightning-bolt' },
+    media: { title: 'Media', icon: 'mdi:television-play' },
+  };
+  const currentView = () => location.pathname.split('/').filter(Boolean)[1] || 'home';
+
+  // ---- fake Home Assistant frontend ----
+  customElements.define('home-assistant', class extends HTMLElement {
+    connectedCallback() {
+      if (this.shadowRoot) return;
+      this.attachShadow({ mode: 'open' }).innerHTML = '<home-assistant-main></home-assistant-main>';
+    }
+  });
+
+  customElements.define('home-assistant-main', class extends HTMLElement {
+    connectedCallback() {
+      if (this.shadowRoot) return;
+      const items = ['mdi:view-dashboard', 'mdi:map-marker', 'mdi:chart-line', 'mdi:calendar', 'mdi:magnify', 'mdi:cog'];
+      this.attachShadow({ mode: 'open' }).innerHTML = `
+        <style>
+          :host { display: block; --mdc-drawer-width: 256px; }
+          .sidebar { position: fixed; top: 0; bottom: 0; left: 0; width: 256px; box-sizing: border-box;
+            background: rgba(7, 11, 19, 0.82); border-right: 1px solid rgba(255,255,255,0.06);
+            padding: 14px 10px; display: flex; flex-direction: column; gap: 4px; z-index: 3; }
+          .brand { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 10px; margin-bottom: 8px;
+            font: 600 17px/1 -apple-system, system-ui; color: #e9eef6; }
+          .item { display: flex; align-items: center; gap: 14px; height: 44px; padding: 0 12px; border-radius: 12px;
+            color: #93a0b5; font: 500 14px/1 -apple-system, system-ui; }
+          .item.sel { background: rgba(88,166,255,0.12); color: #58a6ff; }
+          ha-icon { --mdc-icon-size: 22px; }
+          .panel { margin-left: 256px; }
+          @media (max-width: 869px) { :host { --mdc-drawer-width: 0px; } .sidebar { display: none; } .panel { margin-left: 0; } }
+        </style>
+        <aside class="sidebar">
+          <div class="brand"><ha-icon icon="mdi:menu"></ha-icon>Home Assistant</div>
+          ${items.map((ic, i) => `<div class="item ${i === 0 ? 'sel' : ''}"><ha-icon icon="${ic}"></ha-icon>${['Glass', 'Map', 'History', 'Calendar', 'Search', 'Settings'][i]}</div>`).join('')}
+        </aside>
+        <div class="panel"><partial-panel-resolver><ha-panel-lovelace></ha-panel-lovelace></partial-panel-resolver></div>`;
+    }
+  });
+
+  customElements.define('ha-panel-lovelace', class extends HTMLElement {
+    connectedCallback() {
+      if (this.shadowRoot) return;
+      this.attachShadow({ mode: 'open' }).innerHTML = '<hui-root></hui-root>';
+    }
+  });
+
+  customElements.define('hui-root', class extends HTMLElement {
+    connectedCallback() {
+      if (this.shadowRoot) return;
+      this.lovelace = { editMode: Q.has('edit') };
+      const tabs = Object.entries(VIEWS).map(([p, v]) =>
+        `<span class="t" data-p="${p}"><ha-icon icon="${v.icon}"></ha-icon></span>`).join('');
+      this.attachShadow({ mode: 'open' }).innerHTML = `
+        <style>
+          :host { display: block; }
+          .header { position: fixed; top: 0; left: var(--mdc-drawer-width, 0px); right: 0; z-index: 4;
+            height: var(--header-height); background: rgba(7, 11, 19, 0.72); backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.06); }
+          .toolbar { display: flex; align-items: center; height: 100%; padding: 0 12px; gap: 6px; color: #e9eef6; }
+          .toolbar .title { font: 600 18px/1 -apple-system, system-ui; margin-left: 8px; }
+          .tabs { display: flex; gap: 2px; margin: 0 auto; height: 100%; }
+          .t { display: grid; place-items: center; width: 56px; height: 100%; color: #93a0b5; box-sizing: border-box; }
+          .t.sel { color: #58a6ff; border-bottom: 2px solid #58a6ff; }
+          ha-icon { --mdc-icon-size: 22px; }
+          #view { padding-top: calc(var(--header-height) + env(safe-area-inset-top)); }
+          .btn { width: 40px; height: 40px; display: grid; place-items: center; color: #93a0b5; }
+        </style>
+        <div class="header"><div class="toolbar">
+          <span class="btn"><ha-icon icon="mdi:menu"></ha-icon></span>
+          <div class="tabs">${tabs}</div>
+          <span class="btn"><ha-icon icon="mdi:pencil"></ha-icon></span>
+        </div></div>
+        <div id="view"><hui-view><hui-sections-view></hui-sections-view></hui-view></div>`;
+      const sync = () => this.shadowRoot.querySelectorAll('.t').forEach((t) => t.classList.toggle('sel', t.dataset.p === currentView()));
+      sync();
+      window.addEventListener('location-changed', sync);
+    }
+  });
+  customElements.define('hui-view', class extends HTMLElement {
+    connectedCallback() { this.style.display = 'block'; }
+  });
+  customElements.define('hui-view-footer', class extends HTMLElement {});
+
+  // ---- demo content (generic) ----
+  function tile(icon, label, value, unit, accent) {
+    return `<div class="tile" style="--a:${accent}"><span class="ti"><ha-icon icon="${icon}"></ha-icon></span>
+      <div><div class="lab">${label}</div><div class="met">${value}<small>${unit || ''}</small></div></div></div>`;
+  }
+  const CONTENT = {
+    home: () => `
+      <section class="wide hero"><div class="lab">Thursday evening</div><div class="big">Good evening</div>
+        <div class="sub">Everything is quiet · 3 lights on · back door unlocked</div></section>
+      <section>${tile('mdi:thermometer', 'Indoor', '71', '°F', '#ff7a59')}${tile('mdi:water-percent', 'Humidity', '42', '%', '#4aa8ff')}</section>
+      <section>${tile('mdi:solar-power', 'Solar', '2.4', 'kW', '#f6d365')}${tile('mdi:battery-high', 'Battery', '86', '%', '#7ee08a')}</section>
+      <section>${tile('mdi:lightbulb-group', 'Lights on', '3', '', '#ffb547')}${tile('mdi:door-closed-lock', 'Locks', '1', 'open', '#ff5c5c')}</section>
+      <section>${tile('mdi:robot-vacuum', 'Vacuum', 'Docked', '', '#4dd6e8')}${tile('mdi:washing-machine', 'Washer', '18', 'min', '#c48cff')}</section>
+      <section class="wide list">${['Living Room', 'Kitchen', 'Primary Bedroom', 'Office', 'Garage'].map((n, i) =>
+        `<div class="li"><span class="ti" style="--a:${['#ffb547', '#ffb547', '#93a0b5', '#4dd6e8', '#93a0b5'][i]}"><ha-icon icon="${['mdi:sofa', 'mdi:silverware-fork-knife', 'mdi:bed', 'mdi:fan', 'mdi:lock'][i]}"></ha-icon></span>
+         <span class="nm">${n}</span><span class="st">${['2 on · 71°', '1 on · 72°', 'All off · 68°', 'Fan 2/6 · 70°', 'Closed'][i]}</span></div>`).join('')}</section>
+      <section>${tile('mdi:cctv', 'Cameras', '4', 'live', '#58a6ff')}${tile('mdi:weather-partly-cloudy', 'Outside', '58', '°F', '#93a0b5')}</section>`,
+  };
+  const generic = (v) => () => `
+      <section class="wide hero"><div class="lab">${v.title}</div><div class="big">${v.title}</div>
+        <div class="sub">Demo view content</div></section>
+      <section>${tile(v.icon, 'Metric', '42', '', '#58a6ff')}${tile('mdi:thermometer', 'Indoor', '71', '°F', '#ff7a59')}</section>
+      <section>${tile('mdi:water', 'Water', '18', 'gal', '#4aa8ff')}${tile('mdi:lightning-bolt', 'Power', '1.2', 'kW', '#f6d365')}</section>
+      <section>${tile('mdi:fan', 'Fan', '2/6', '', '#4dd6e8')}${tile('mdi:lock', 'Locks', 'All', 'locked', '#3fb950')}</section>`;
+
+  customElements.define('hui-sections-view', class extends HTMLElement {
+    connectedCallback() {
+      if (this.shadowRoot) return;
+      this.attachShadow({ mode: 'open' }).innerHTML = `
+        <style>
+          :host { display: block; padding: 8px 16px 16px; max-width: 1360px; margin: 0 auto; box-sizing: border-box; }
+          .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+          section { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+          section.wide { grid-column: 1 / -1; }
+          .hero, .list { display: block; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 22px; padding: 18px 18px; }
+          .lab { font: 600 11px/1 -apple-system, system-ui; letter-spacing: .09em; text-transform: uppercase; color: #93a0b5; }
+          .big { font: 700 40px/1.1 -apple-system, system-ui; letter-spacing: -0.02em; margin: 10px 0 6px; }
+          .sub { font: 500 13px/1.3 -apple-system, system-ui; color: #93a0b5; }
+          .tile { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.045);
+            border: 1px solid rgba(255,255,255,0.09); border-radius: 22px; padding: 14px; min-width: 0; }
+          .ti { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+            color: var(--a); background: color-mix(in srgb, var(--a) 16%, transparent);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--a) 45%, transparent); }
+          ha-icon { --mdc-icon-size: 20px; }
+          .met { font: 700 26px/1.1 -apple-system, system-ui; font-variant-numeric: tabular-nums; margin-top: 6px; white-space: nowrap; }
+          .met small { font-size: 13px; color: #93a0b5; margin-left: 2px; font-weight: 600; }
+          .li { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+          .li:first-child { border-top: 0; padding-top: 0; }
+          .nm { flex: 1; font: 650 15px/1 -apple-system, system-ui; }
+          .st { font: 500 13px/1 -apple-system, system-ui; color: #93a0b5; }
+          hui-view-footer { display: block; margin-top: 16px; }
+        </style>
+        <div class="grid"></div>
+        <hui-view-footer></hui-view-footer>`;
+      const draw = () => {
+        const v = currentView();
+        this.shadowRoot.querySelector('.grid').innerHTML = (CONTENT[v] || generic(VIEWS[v] || VIEWS.home))();
+      };
+      draw();
+      window.addEventListener('location-changed', draw);
+      window.addEventListener('popstate', draw);
+    }
+  });
+</script>
+<script src="../glasshouse-nav-card.js"></script>
+</head>
+<body>
+<script>
+  history.replaceState(null, '', `/glass/${Q.get('path') || 'home'}${location.search}`);
+  document.body.append(document.createElement('home-assistant'));
+</script>
+<script>
+(function () {
+  const hass = {
+    states: {
+      'binary_sensor.demo_alerting': { entity_id: 'binary_sensor.demo_alerting', state: 'on', attributes: {} },
+      'sensor.demo_open_doors': { entity_id: 'sensor.demo_open_doors', state: '2', attributes: {} },
+      'binary_sensor.demo_peak': { entity_id: 'binary_sensor.demo_peak', state: 'on', attributes: {} },
+    },
+  };
+  const config = {
+    routes: [
+      { path: 'home', label: 'Now', icon: 'mdi:home-variant', badge: 'binary_sensor.demo_alerting' },
+      { path: 'rooms', label: 'Rooms', icon: 'mdi:floor-plan' },
+      { path: 'climate', label: 'Climate', icon: 'mdi:thermostat' },
+      { path: 'security', label: 'Security', icon: 'mdi:shield-home', badge: 'sensor.demo_open_doors' },
+    ],
+    more: [
+      { path: 'energy', label: 'Energy', icon: 'mdi:lightning-bolt', badge: 'binary_sensor.demo_peak' },
+      { path: 'media', label: 'Media', icon: 'mdi:television-play' },
+    ],
+    layout: Q.get('layout') || 'rail',
+    hide_header: Q.get('hide_header') === 'false' ? false : Q.get('hide_header') === 'true' ? true : 'auto',
+  };
+  const footer = document.querySelector('home-assistant').shadowRoot.querySelector('home-assistant-main')
+    .shadowRoot.querySelector('ha-panel-lovelace').shadowRoot.querySelector('hui-root').shadowRoot
+    .querySelector('hui-sections-view').shadowRoot.querySelector('hui-view-footer');
+  const card = document.createElement('glasshouse-nav-card');
+  card.setConfig(config);
+  card.hass = hass;
+  footer.append(card);
+  window.card = card;
+  document.addEventListener('hass-toggle-menu', () => console.log('hass-toggle-menu'));
+
+  // ?go=<route key> taps a tab after load (checks real navigation + indicator slide)
+  if (Q.has('go')) {
+    setTimeout(() => {
+      const t = document.querySelector('glasshouse-nav-portal').shadowRoot.querySelector(`.tab[data-key="${Q.get('go')}"]`);
+      if (t) t.click();
+    }, 300);
+  }
+  // ?bottom scrolls to the end of the page (checks the spacer keeps content above the bar)
+  if (Q.has('bottom')) setTimeout(() => window.scrollTo(0, document.documentElement.scrollHeight), 300);
+  if (Q.has('sheet')) {
+    setTimeout(() => {
+      const portal = document.querySelector('glasshouse-nav-portal');
+      const more = portal && portal.shadowRoot.querySelector('.tab[data-key="more"]');
+      if (more) more.click();
+    }, 300);
+  }
+})();
+</script>
+</body>
+</html>

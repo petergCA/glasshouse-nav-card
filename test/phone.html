@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glasshouse Nav Card phone frame</title>
+<!-- Headless Chrome enforces a minimum window width, so phone screenshots render the harness in a
+     390 x 844 iframe (a true 390 px viewport). Query parameters are passed through. -->
+<style>
+  html, body { margin: 0; background: #070b13; }
+  iframe { display: block; width: 390px; height: 844px; border: 0; }
+</style>
+</head>
+<body>
+<script>
+  const f = document.createElement('iframe');
+  f.src = 'harness.html' + location.search;
+  document.body.append(f);
+</script>
+</body>
+</html>

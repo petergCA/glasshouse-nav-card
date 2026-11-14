@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glasshouse Nav Card preview</title>
+<!-- Composition for docs/preview.png: shot.sh <dir> preview.png 1880 880 with PAGE=preview -->
+<style>
+  html, body { margin: 0; }
+  body {
+    width: 1880px; height: 880px; box-sizing: border-box; padding: 34px; display: flex; gap: 28px; align-items: center;
+    background:
+      radial-gradient(900px 600px at 10% 0%, rgba(88,166,255,0.18), transparent 60%),
+      radial-gradient(800px 600px at 90% 100%, rgba(196,140,255,0.14), transparent 60%),
+      #05080f;
+  }
+  iframe { border: 0; display: block; flex: 0 0 auto; box-shadow: 0 30px 60px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.08); }
+  .desk { width: 1020px; height: 812px; border-radius: 18px; }
+  .phone { width: 375px; height: 812px; border-radius: 46px; }
+</style>
+</head>
+<body>
+  <iframe class="desk" src="harness.html?path=home"></iframe>
+  <iframe class="phone" src="harness.html?path=home"></iframe>
+  <iframe class="phone" src="harness.html?path=energy&sheet"></iframe>
+</body>
+</html>
