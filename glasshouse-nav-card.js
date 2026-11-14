@@ -1,5 +1,5 @@
 /*!
- * Glasshouse Nav Card v1.2.0
+ * Glasshouse Nav Card v1.2.1
  * App-like navigation for multi-view Home Assistant dashboards: a floating frosted tab bar on
  * phones, a slim rail (or a centred segmented bar) on desktop.
  * Part of the Glasshouse card suite. MIT License (c) 2026 Peter Gray.
@@ -7,7 +7,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.2.0';
+  const VERSION = '1.2.1';
   const TAG = 'glasshouse-nav-card';
   const PORTAL_TAG = 'glasshouse-nav-portal';
   const HEADER_STYLE_ID = 'glasshouse-nav-hide-header';
@@ -159,8 +159,8 @@
     /* ---------- phones with a wide side safe-area (e.g. a status strip): vertical bar inside it ---------- */
     .dock.mobile.side { top: auto; left: auto; right: auto; padding: 0 6px; justify-content: center;
       bottom: calc(env(safe-area-inset-bottom) + ${BAR_GAP}px); }
-    .dock.mobile.side-right { right: 0; width: env(safe-area-inset-right); }
-    .dock.mobile.side-left { left: 0; width: env(safe-area-inset-left); }
+    .dock.mobile.side-right { right: 0; width: var(--gh-side-w, env(safe-area-inset-right)); }
+    .dock.mobile.side-left { left: 0; width: var(--gh-side-w, env(safe-area-inset-left)); }
     .side .bar { width: 100%; max-width: 72px; height: auto; border-radius: 30px; padding: 6px; }
     .side .track { flex-direction: column; height: auto; gap: 2px; }
     .side .tab { flex: none; width: 100%; height: 62px; flex-direction: column; gap: 3px; padding: 0; }
@@ -887,8 +887,16 @@
       if (mode === 'mobile' && cfg.side_rail && this._insetProbe && this._insetProbe.isConnected) {
         try {
           const cs = getComputedStyle(this._insetProbe);
-          const l = parseFloat(cs.paddingLeft) || 0, r = parseFloat(cs.paddingRight) || 0;
-          if (Math.max(l, r) >= SIDE_MIN) side = r >= l ? 'right' : 'left';
+          let l = parseFloat(cs.paddingLeft) || 0, r = parseFloat(cs.paddingRight) || 0;
+          // also measure the real empty strip beside the dashboard (some apps pad the page instead of reporting insets)
+          if (ctx.view && ctx.view.isConnected) {
+            const vr = ctx.view.getBoundingClientRect();
+            if (vr.width > 0) { l = Math.max(l, vr.left); r = Math.max(r, width - vr.right); }
+          }
+          if (Math.max(l, r) >= SIDE_MIN) {
+            side = r >= l ? 'right' : 'left';
+            this._sideW = Math.round(Math.max(l, r));
+          }
         } catch (e) { /* no safe-area support */ }
       }
       if (mode === 'mobile') {
@@ -907,6 +915,7 @@
       const root = document.documentElement;
       const dock = this.portal.shadowRoot.querySelector('.dock');
       let spacer = false;
+      if (dock) { if (side && this._sideW) dock.style.setProperty('--gh-side-w', `${this._sideW}px`); else dock.style.removeProperty('--gh-side-w'); }
       if (mode === 'mobile' && side) {
         // the bar lives in the side safe-area: nothing to push
         root.style.setProperty('--gh-nav-height', '0px');
