@@ -7,7 +7,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.2.3';
+  const VERSION = '1.2.4';
   const TAG = 'glasshouse-nav-card';
   const PORTAL_TAG = 'glasshouse-nav-portal';
   const HEADER_STYLE_ID = 'glasshouse-nav-hide-header';
@@ -427,8 +427,14 @@
     return { tabs: routes.slice(0, n), overflow: routes.slice(n).concat(more), hasMore: needMore };
   }
 
-  function modeFor(width, cfg) {
-    return width < cfg.mobile_breakpoint ? 'mobile' : cfg.layout;
+  const HYSTERESIS = 12;
+  /** Phone or wide layout. With the previous mode, a width within HYSTERESIS px of the breakpoint keeps it, so a
+   *  viewport that wobbles around the breakpoint (foldables, toolbars, scrollbars) never flips the header back and forth. */
+  function modeFor(width, cfg, prev) {
+    const bp = cfg.mobile_breakpoint;
+    if (prev === 'mobile' && width < bp + HYSTERESIS) return 'mobile';
+    if (prev && prev !== 'mobile' && width >= bp - HYSTERESIS) return cfg.layout;
+    return width < bp ? 'mobile' : cfg.layout;
   }
 
   function wantsHeaderHidden(cfg, mode) {
@@ -862,7 +868,8 @@
       const cfg = card._config;
       const ctx = card._context();
       const width = window.innerWidth || document.documentElement.clientWidth || 1024;
-      const mode = modeFor(width, cfg);
+      const mode = modeFor(width, cfg, this._lastCfg === cfg ? this._lastMode : null);
+      this._lastCfg = cfg; this._lastMode = mode;
       const editing = card._isEditing(ctx);
       this.lastEditing = editing;
       const wantHidden = wantsHeaderHidden(cfg, mode);

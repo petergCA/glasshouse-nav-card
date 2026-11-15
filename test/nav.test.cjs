@@ -119,6 +119,9 @@ function setup(opts = {}) {
     eq(I.splitTabs([1, 2], ['m'], false), { tabs: [1, 2], overflow: ['m'], hasMore: true }, 'more list adds the More tab');
     eq(I.modeFor(390, { mobile_breakpoint: 768, layout: 'rail' }), 'mobile', 'mode: phone');
     eq(I.modeFor(1300, { mobile_breakpoint: 768, layout: 'top' }), 'top', 'mode: desktop top');
+    eq(I.modeFor(762, { mobile_breakpoint: 768, layout: 'none' }, 'none'), 'none', 'mode: wide stays wide just under the breakpoint');
+    eq(I.modeFor(774, { mobile_breakpoint: 768, layout: 'none' }, 'mobile'), 'mobile', 'mode: phone stays phone just over it');
+    eq(I.modeFor(740, { mobile_breakpoint: 768, layout: 'none' }, 'none'), 'mobile', 'mode: a real change still switches');
   }
 
   console.log('config validation');
