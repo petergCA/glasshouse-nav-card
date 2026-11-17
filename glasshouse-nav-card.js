@@ -7,7 +7,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.2.4';
+  const VERSION = '1.3.0';
   const TAG = 'glasshouse-nav-card';
   const PORTAL_TAG = 'glasshouse-nav-portal';
   const HEADER_STYLE_ID = 'glasshouse-nav-hide-header';
@@ -784,6 +784,7 @@
     }
 
     _start() {
+      ScrollGuard.start();
       if (!customElements.get(PORTAL_TAG)) customElements.define(PORTAL_TAG, class extends HTMLElement {});
       this.portal = document.createElement(PORTAL_TAG);
       this.portal.attachShadow({ mode: 'open' });
@@ -849,6 +850,7 @@
       const url = routeUrl(route, location.pathname);
       if (isActive(route, location.pathname, Number(key)) || url === location.pathname + location.search) {
         // Re-tapping the current tab scrolls to the top, like a native app.
+        ScrollGuard.allow();
         try { window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' }); } catch (e) { /* ignore */ }
         return;
       }
@@ -1038,6 +1040,40 @@
   function reducedMotion() {
     try { return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
   }
+
+  /**
+   * Bottom-of-page scroll guard. WebKit (iPhone/iPad) sometimes snaps the page upward when a card swaps its content
+   * while you're at the bottom: the page height doesn't change, the scroll position just drops. If that happens with no
+   * scroll input from you (touch, wheel, keys) and no navigation, put the page back where it was.
+   */
+  const ScrollGuard = {
+    on: false, y: 0, h: 0, input: 0, nav: 0, own: 0,
+    start() {
+      if (this.on || typeof window === 'undefined') return;
+      this.on = true;
+      const se = () => document.scrollingElement || document.documentElement;
+      const mark = () => { this.input = Date.now(); };
+      for (const ev of ['wheel', 'touchstart', 'touchmove', 'keydown', 'pointerdown']) window.addEventListener(ev, mark, { passive: true, capture: true });
+      window.addEventListener('location-changed', () => { this.nav = Date.now(); });
+      window.addEventListener('popstate', () => { this.nav = Date.now(); });
+      this.y = window.scrollY; this.h = se().scrollHeight;
+      window.addEventListener('scroll', () => {
+        const y = window.scrollY, h = se().scrollHeight, now = Date.now();
+        const max = h - window.innerHeight;
+        const wasBottom = this.y >= (this.h - window.innerHeight) - 40;
+        const quiet = now - this.input > 400 && now - this.nav > 1500 && now - this.own > 1500;
+        if (y < this.y - 30 && wasBottom && quiet && Math.abs(h - this.h) < 2 && !document.body.style.overflow) {
+          const back = Math.min(this.y, max);
+          this.y = back;
+          window.scrollTo(window.scrollX, back);
+          return;
+        }
+        this.y = y; this.h = h;
+      }, { passive: true });
+    },
+    /** our own deliberate scrolls (re-tap the current tab = back to top) */
+    allow() { this.own = Date.now(); },
+  };
 
   const controller = new NavController();
 
