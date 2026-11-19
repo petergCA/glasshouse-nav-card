@@ -7,7 +7,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.3.0';
+  const VERSION = '1.3.1';
   const TAG = 'glasshouse-nav-card';
   const PORTAL_TAG = 'glasshouse-nav-portal';
   const HEADER_STYLE_ID = 'glasshouse-nav-hide-header';
@@ -668,6 +668,7 @@
     // key: index (number) of the active route in [routes..., more...] or null
     setActive(key, force) {
       const k = key === null || key === undefined ? null : String(key);
+      if (!this.buttons) return;  // not built yet (a nav card on a view that isn't open); the next update after build applies it
       if (k === this.activeKey && !force) return;
       this.activeKey = k;
       const inTabs = k !== null && this.buttons.has(k);
